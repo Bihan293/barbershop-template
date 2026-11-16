@@ -1,0 +1,71 @@
+/* ============================================================
+   ТЕМА: LIGHT PINK — светлый «девичий» вариант.
+   Подключается одной строкой в site/theme.css.
+   ============================================================ */
+:root{
+  --font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --font-display:'Playfair Display',Georgia,serif;
+  --color-scheme:light;
+
+  /* Акцент */
+  --accent-rgb:185,78,111;
+  --accent:#b94e6f;
+  --accent-light:#a63e5f;
+  --accent-line:rgba(var(--accent-rgb),.3);
+  --on-accent:#ffffff;
+
+  /* Фон и текст */
+  --bg:#fffafc;
+  --bg-deep:#fff2f7;
+  --bg-soft:#ffffff;
+  --text-rgb:55,43,49;
+  --text:#372b31;
+  --muted:rgba(var(--text-rgb),.64);
+  --faint:rgba(var(--text-rgb),.5);
+  --line:rgba(var(--text-rgb),.14);
+  --line-soft:rgba(var(--text-rgb),.08);
+
+  /* Поверхности */
+  --surface:#ffffff;
+  --surface-raised:#fff6fa;
+  --surface-alt:#fff0f6;
+  --surface-focus:#fff3f8;
+  --surface-deep:#f8e9f0;
+  --surface-deep-2:#f4e1ea;
+  --modal-bg:#fffafc;
+  --select-bg:#ffffff;
+  --hero-bg:#fff7fa;
+  --section-from:#fffafc;
+  --section-to:#fff2f7;
+  --map-bg:#fff4f8;
+  --lightbox-surface:#2b1e25;
+
+  /* Полупрозрачные слои */
+  --panel-rgb:255,255,255;
+  --backdrop-rgb:70,45,58;
+  --shadow-rgb:130,90,108;
+  --highlight-rgb:55,43,49;
+  --on-media-rgb:255,255,255;
+  --on-media:#ffffff;
+
+  /* Статусы */
+  --danger-rgb:190,60,80;
+  --danger:#be3c50;
+  --danger-soft:#a52f45;
+  --danger-light:#8e2439;
+  --success-rgb:60,140,90;
+  --success:#2f7d4f;
+
+  /* Карточки */
+  --card-bg:linear-gradient(155deg,#ffffff,rgba(255,246,250,.94) 48%,rgba(var(--accent-rgb),.07));
+  --card-bg-soft:linear-gradient(160deg,#ffffff,rgba(255,246,250,.9));
+  --card-bg-hover:linear-gradient(155deg,#ffffff,rgba(255,240,247,.96));
+
+  /* Заглушки галереи */
+  --shot-1:radial-gradient(70% 58% at 72% 18%,rgba(var(--accent-rgb),.28),transparent 62%),radial-gradient(48% 38% at 14% 88%,rgba(var(--accent-rgb),.12),transparent 66%),linear-gradient(160deg,#fbe4ec,#f7d7e3 72%);
+  --shot-2:radial-gradient(58% 48% at 28% 24%,rgba(190,170,200,.24),transparent 64%),linear-gradient(145deg,#f3eaf5,#faeef4 76%);
+  --shot-3:radial-gradient(60% 55% at 78% 80%,rgba(var(--accent-rgb),.24),transparent 64%),linear-gradient(150deg,#fce8d9,#f9dce8 74%);
+  --shot-4:radial-gradient(55% 45% at 70% 22%,rgba(180,160,150,.2),transparent 66%),linear-gradient(150deg,#f8eee4,#fbeaf1 76%);
+  --shot-5:radial-gradient(62% 52% at 24% 32%,rgba(var(--accent-rgb),.2),transparent 66%),linear-gradient(150deg,#fbe1e9,#f6d5e1 76%);
+  --shot-6:radial-gradient(60% 50% at 76% 24%,rgba(170,180,210,.2),transparent 64%),linear-gradient(150deg,#eef1fa,#f9eaf2 78%);
+}

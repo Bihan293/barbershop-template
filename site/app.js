@@ -1877,6 +1877,14 @@
         });
       }
 
+      function syncThemeColor() {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        var bg = getComputedStyle(document.documentElement)
+          .getPropertyValue('--bg').trim();
+        if (bg) meta.content = bg;
+      }
+
       var logoFitTimer = null;
       window.addEventListener('resize', function () {
         window.clearTimeout(logoFitTimer);
@@ -1886,6 +1894,7 @@
         document.fonts.ready.then(fitHeaderLogo).catch(function () {});
       }
       fitHeaderLogo();
+      syncThemeColor();
 
       buildDateOptions();
       renderServicePicker();

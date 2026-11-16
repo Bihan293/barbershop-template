@@ -735,7 +735,12 @@ async def handle_site_asset(request: web.Request) -> web.StreamResponse:
         "app.js": "application/javascript; charset=utf-8",
         "privacy.html": "text/html; charset=utf-8",
     }
-    if name not in allowed:
+    is_theme = (
+        name.startswith("themes/")
+        and name.endswith(".css")
+        and ".." not in name
+    )
+    if name not in allowed and not is_theme:
         return web.Response(status=404)
     path = ctx.cfg.base_dir / "site" / name
     if not path.exists():
@@ -820,6 +825,7 @@ def create_web_app(ctx: Ctx) -> web.Application:
     app.router.add_get("/", handle_index)
     app.router.add_get("/index.html", handle_index)
     app.router.add_get("/theme.css", handle_site_asset)
+    app.router.add_get("/themes/{name}", handle_site_asset)
     app.router.add_get("/app.js", handle_site_asset)
     app.router.add_get("/privacy.html", handle_privacy)
     app.router.add_get("/api/site", api_site)
