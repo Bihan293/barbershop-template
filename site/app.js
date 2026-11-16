@@ -553,8 +553,9 @@
         var start = parseMinutes(settings.work_start || '10:00');
         var last = parseMinutes(settings.last_slot || '20:00');
         var end = parseMinutes(settings.work_end || '21:00');
-        var lunchStart = settings.lunch_start ? parseMinutes(settings.lunch_start) : -1;
-        var lunchEnd = settings.lunch_end ? parseMinutes(settings.lunch_end) : -1;
+        var selectedMaster = findMaster(masterSelect ? masterSelect.value : '');
+        var lunchStart = selectedMaster && selectedMaster.break_start ? parseMinutes(selectedMaster.break_start) : -1;
+        var lunchEnd = selectedMaster && selectedMaster.break_end ? parseMinutes(selectedMaster.break_end) : -1;
         var hasLunch = lunchStart >= 0 && lunchEnd > lunchStart;
         if (!day || day < isoDay(0) || day > isoDay(60)) return [];
         var now = new Date();

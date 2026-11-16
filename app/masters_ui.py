@@ -47,6 +47,14 @@ async def masters_screen(ctx: Ctx) -> tuple[str, Kb]:
     return "\n".join(lines), Kb(rows)
 
 
+def master_break_label(master: dict) -> str:
+    start = str(master.get("break_start") or "")
+    end = str(master.get("break_end") or "")
+    if start and end:
+        return f"{start}–{end}"
+    return "нет"
+
+
 def master_detail_text(
     master: dict, schedules: list[dict], days_off: list[dict], today_state: str, settings: dict
 ) -> str:
@@ -61,10 +69,10 @@ def master_detail_text(
         f"🖼 Фото: {'есть' if master.get('photo') else 'нет'}",
         "",
         f"🕘 Часы салона: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>",
-        f"🍽 Обед: <b>{settings.get('lunch_start', '13:00')}–{settings.get('lunch_end', '14:00')}</b>",
+        f"🍽 Перерыв: <b>{master_break_label(master)}</b> · на все дни",
         f"🚫 Постоянные выходные: {', '.join(weekly_off) if weekly_off else 'нет'}",
         "",
-        "Часы работы и обед общие для всех мастеров и меняются в «Настройках».",
+        "Часы работы общие — из «Настроек». Перерыв у каждого мастера свой.",
         "",
     ]
     if days_off:
@@ -91,6 +99,7 @@ def master_detail_kb(master: dict, today_off: bool = False) -> Kb:
         ],
         [
             Btn("🖼 Фото", callback_data=f"adm:mst_photo:{mid}"),
+            Btn("🍽 Перерыв", callback_data=f"adm:mst_break:{mid}"),
         ],
     ]
     if master.get("photo"):
@@ -126,6 +135,30 @@ async def show_master_detail(ctx: Ctx, q, master_id: int, suffix: str = "") -> N
         caption=f"{esc(master['name'])} · мастер",
         user_id=q.from_user.id,
     )
+
+
+async def master_break_screen(ctx: Ctx, master_id: int) -> tuple[str, Kb]:
+    master = await ctx.db.get_master(master_id)
+    if not master:
+        return "Мастер не найден.", Kb([[Btn("← К мастерам", callback_data="adm:masters")]])
+    settings = await ctx.db.get_settings()
+    current = master_break_label(master)
+    text = (
+        f"🍽 <b>Перерыв · {esc(master['name'])}</b>\n\n"
+        f"Сейчас: <b>{current}</b>\n\n"
+        f"Рабочие часы салона: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>\n"
+        "Один перерыв действует на все дни недели.\n"
+        "Если перерыва нет — слоты идут без обеда."
+    )
+    rows: list[list[Btn]] = [
+        [Btn("✏️ Изменить перерыв", callback_data=f"adm:mst_break_edit:{master_id}")],
+    ]
+    if master.get("break_start") or master.get("break_end"):
+        rows.append([
+            Btn("🗑 Убрать перерыв", callback_data=f"adm:mst_break_clear:{master_id}")
+        ])
+    rows.append([Btn("← К мастеру", callback_data=f"adm:mst:{master_id}")])
+    return text, Kb(rows)
 
 
 async def master_schedule_screen(ctx: Ctx, master_id: int) -> tuple[str, Kb]:

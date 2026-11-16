@@ -10,8 +10,16 @@ TZ = ZoneInfo("Asia/Almaty")
 NOW = datetime(2026, 11, 15, 9, 0, tzinfo=TZ)
 
 
-def master(master_id=1, active=1):
-    return {"id": master_id, "name": f"Мастер {master_id}", "active": active}
+def master(master_id=1, active=1, **overrides):
+    row = {
+        "id": master_id,
+        "name": f"Мастер {master_id}",
+        "active": active,
+        "break_start": "",
+        "break_end": "",
+    }
+    row.update(overrides)
+    return row
 
 
 def schedule(master_id=1, **overrides):
@@ -34,8 +42,6 @@ def slots(*, orders=None, masters=None, schedules=None, days_off=None, master_id
         "work_start": "10:00",
         "work_end": "21:00",
         "last_slot": "20:00",
-        "lunch_start": "",
-        "lunch_end": "",
     }
     if settings:
         base_settings.update(settings)
@@ -69,8 +75,8 @@ class SchedulingTests(unittest.TestCase):
         self.assertNotIn("17:00", result)
         self.assertIn("17:30", result)
 
-    def test_global_lunch_blocks_overlapping_starts(self):
-        result = slots(settings={"lunch_start": "14:00", "lunch_end": "15:00"})
+    def test_master_break_blocks_overlapping_starts(self):
+        result = slots(masters=[master(break_start="14:00", break_end="15:00")])
         self.assertIn("13:30", result)
         self.assertNotIn("14:00", result)
         self.assertIn("15:00", result)
@@ -111,15 +117,20 @@ class SchedulingTests(unittest.TestCase):
         self.assertIn("12:00", result)
         self.assertIn("15:00", result)
 
-    def test_global_lunch_applies_to_all_masters(self):
-        result = slots(
-            masters=[master(1), master(2)],
+    def test_master_break_is_individual(self):
+        result_any = slots(
+            masters=[master(1, break_start="13:00", break_end="14:00"), master(2)],
             schedules=[schedule(1), schedule(2)],
-            settings={"lunch_start": "13:00", "lunch_end": "14:00"},
         )
-        self.assertNotIn("13:00", result)
-        self.assertNotIn("13:30", result)
-        self.assertIn("14:00", result)
+        self.assertIn("13:00", result_any)
+        result_first = slots(
+            master_id=1,
+            masters=[master(1, break_start="13:00", break_end="14:00"), master(2)],
+            schedules=[schedule(1), schedule(2)],
+        )
+        self.assertNotIn("13:00", result_first)
+        self.assertNotIn("13:30", result_first)
+        self.assertIn("14:00", result_first)
 
     def test_specific_master_is_respected(self):
         result = slots(

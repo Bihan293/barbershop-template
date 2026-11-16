@@ -305,10 +305,6 @@ def settings_hours_text(settings: dict) -> str:
 
 def settings_hours_note(settings: dict) -> str:
     parts: list[str] = []
-    lunch_start = str(settings.get("lunch_start") or "")
-    lunch_end = str(settings.get("lunch_end") or "")
-    if lunch_start and lunch_end:
-        parts.append(f"Обед: {lunch_start}–{lunch_end}")
     last_slot = str(settings.get("last_slot") or "")
     if last_slot:
         parts.append(f"Последняя запись — в {last_slot}")

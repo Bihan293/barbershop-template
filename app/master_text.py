@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .deps import *
-from .masters_ui import WEEKDAY_TITLES
+from .masters_ui import WEEKDAY_TITLES, master_break_screen
 
 # ============================================================
 # Мастера: текстовые сценарии
@@ -73,6 +73,79 @@ async def handle_master_text(ctx: Ctx, update: Update, state: str) -> None:
 
     if state == "mst_photo":
         await message.reply_text("Здесь нужно фото. Отправьте изображение или нажмите «Отмена».")
+        return
+
+    # ---------- общий перерыв мастера ----------
+    if state == "mst_common_break_value":
+        master_id = int(data.get("master_id", 0))
+        master = await ctx.db.get_master(master_id)
+        if not master:
+            ctx.flows.clear(uid)
+            await message.reply_text(
+                "Мастер не найден.",
+                reply_markup=Kb([[Btn("← К мастерам", callback_data="adm:masters")]]),
+            )
+            return
+        if text.strip() == "-":
+            await ctx.db.update_master(master_id, break_start="", break_end="")
+            ctx.flows.clear(uid)
+            text_out, kb = await master_break_screen(ctx, master_id)
+            await message.reply_text(
+                "✅ Перерыв убран.\n\n" + text_out,
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb,
+            )
+            return
+        match = re.search(r"(\d{1,2}:\d{2})\s*(?:[-–—]|до)\s*(\d{1,2}:\d{2})", text)
+        if not match:
+            await message.reply_text(
+                "Введите перерыв как 13:00-14:00 или отправьте «-», чтобы убрать.",
+                reply_markup=cancel_row(f"adm:mst_break:{master_id}"),
+            )
+            return
+        start = valid_time(match.group(1))
+        end = valid_time(match.group(2))
+        if not start or not end or hhmm_to_min(end) <= hhmm_to_min(start):
+            await message.reply_text(
+                "Конец перерыва должен быть позже начала.",
+                reply_markup=cancel_row(f"adm:mst_break:{master_id}"),
+            )
+            return
+        settings = await ctx.db.get_settings()
+        work_start = hhmm_to_min(settings.get("work_start", "10:00"), -1)
+        work_end = hhmm_to_min(settings.get("work_end", "21:00"), -1)
+        if not (work_start <= hhmm_to_min(start) and hhmm_to_min(end) <= work_end):
+            await message.reply_text(
+                f"Перерыв должен быть внутри рабочих часов "
+                f"{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}.",
+                reply_markup=cancel_row(f"adm:mst_break:{master_id}"),
+            )
+            return
+        conflicts = await ctx.db.master_break_conflicts_all(master_id, start, end)
+        if conflicts:
+            first = conflicts[0]
+            await message.reply_text(
+                f"⚠️ На это время уже есть запись: "
+                f"{date_label(first['date'])}, {first['time']} · {esc(first['service_name'])}.\n\n"
+                "Сначала перенесите или отмените её, потом меняйте перерыв.",
+                reply_markup=cancel_row(f"adm:mst_break:{master_id}"),
+            )
+            return
+        ctx.flows.set(
+            uid,
+            "mst_common_break_save",
+            master_id=master_id,
+            start=start,
+            end=end,
+        )
+        await message.reply_text(
+            f"🍽 <b>Перерыв {start}–{end}</b>\n\n"
+            "Будет действовать у мастера каждый день. Сохранить?",
+            reply_markup=Kb([
+                [Btn("✅ Сохранить", callback_data="adm:mst_break_common_save")],
+                [Btn("❌ Отмена", callback_data=f"adm:mst_break:{master_id}")],
+            ]),
+        )
         return
 
     # ---------- перерывы ----------

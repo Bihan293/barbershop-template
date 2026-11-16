@@ -183,28 +183,14 @@ def compute_slots(
         if not active_masters:
             return []
 
-    # Часы работы и обед — единые для всех мастеров, из настроек.
-    # Индивидуальные часы/перерывы мастеров больше не участвуют в расчёте.
+    # Часы работы — единые для всех мастеров, из настроек.
+    # Перерыв — индивидуальный у каждого мастера, но один на все дни.
     work_start = settings.get("work_start", "10:00")
     work_end = settings.get("work_end", "21:00")
     work_start_min = hhmm_to_min(work_start, -1)
     work_end_min = hhmm_to_min(work_end, -1)
     if work_start_min < 0 or work_end_min <= work_start_min:
         return []
-
-    lunch_start = settings.get("lunch_start", "")
-    lunch_end = settings.get("lunch_end", "")
-    lunch_start_min = hhmm_to_min(lunch_start, -1)
-    lunch_end_min = hhmm_to_min(lunch_end, -1)
-    common_breaks: list[dict] = []
-    if (
-        lunch_start_min >= work_start_min
-        and lunch_end_min > lunch_start_min
-        and lunch_end_min <= work_end_min
-    ):
-        common_breaks = [
-            {"break_start": lunch_start, "break_end": lunch_end}
-        ]
 
     schedule_index = _schedule_index(schedules)
     orders_index = _orders_by_master(orders)
@@ -222,10 +208,21 @@ def compute_slots(
         effective_schedule["work_end"] = work_end
         effective_schedule["lunch_start"] = ""
         effective_schedule["lunch_end"] = ""
+        break_start = str(master.get("break_start") or "")
+        break_end = str(master.get("break_end") or "")
+        break_start_min = hhmm_to_min(break_start, -1)
+        break_end_min = hhmm_to_min(break_end, -1)
+        master_breaks: list[dict] = []
+        if (
+            break_start_min >= work_start_min
+            and break_end_min > break_start_min
+            and break_end_min <= work_end_min
+        ):
+            master_breaks = [{"break_start": break_start, "break_end": break_end}]
         slots = master_slots(
             master=master,
             schedule=effective_schedule,
-            breaks=common_breaks,
+            breaks=master_breaks,
             day_off=(mid, day) in days_off,
             orders=orders_index.get(mid, []),
             day=day,
@@ -302,7 +299,11 @@ def public_schedule_label(
         day_label = WEEKDAYS[first] if first == last else f"{WEEKDAYS[first]}–{WEEKDAYS[last]}"
         parts.append(f"{day_label} {label}")
     result = " · ".join(parts)
-    if lunch_start and lunch_end:
+    lunch_from = hhmm_to_min(lunch_start, -1)
+    lunch_to = hhmm_to_min(lunch_end, -1)
+    work_from = hhmm_to_min(work_start, -1)
+    work_to = hhmm_to_min(work_end, -1)
+    if lunch_from >= work_from and lunch_to > lunch_from and lunch_to <= work_to:
         result += f" · обед {lunch_start}–{lunch_end}"
     return result
 

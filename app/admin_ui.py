@@ -756,14 +756,13 @@ async def settings_screen(ctx: Ctx) -> tuple[str, Kb]:
         "",
         f"Онлайн-запись: <b>{'включена' if enabled else 'выключена'}</b>",
         f"Часы работы: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>",
-        f"Обед: <b>{settings.get('lunch_start', '13:00')}–{settings.get('lunch_end', '14:00')}</b>",
         f"Последний старт: <b>{settings.get('last_slot', '20:00')}</b>",
         f"Шаг слотов: <b>{settings.get('slot_step', '30')} мин</b>",
         f"Напоминание админу: <b>за {settings.get('reminder_minutes', '120')} мин</b>",
         f"Редакция политики: <b>{esc(settings.get('privacy_updated', '—'))}</b>",
         "",
-        "Эти часы и обед — единые для сайта, записи и всех мастеров. "
-        "У мастеров остаются только выходные. "
+        "Эти часы — единые для сайта, записи и всех мастеров. "
+        "Перерыв у каждого мастера свой и задаётся в карточке мастера. "
         "Сайт показывает эти же часы в контактах.",
     ]
     rows = [
@@ -771,10 +770,6 @@ async def settings_screen(ctx: Ctx) -> tuple[str, Kb]:
         [
             Btn("🕘 Открытие", callback_data="adm:set_edit:work_start"),
             Btn("🕘 Закрытие", callback_data="adm:set_edit:work_end"),
-        ],
-        [
-            Btn("🍽 Обед с", callback_data="adm:set_edit:lunch_start"),
-            Btn("🍽 Обед до", callback_data="adm:set_edit:lunch_end"),
         ],
         [
             Btn("🕘 Последний старт", callback_data="adm:set_edit:last_slot"),

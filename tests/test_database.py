@@ -245,15 +245,16 @@ class DatabaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(counts.get("telegram"), 1)
         self.assertEqual(counts.get("admin"), 1)
 
-    async def test_global_hours_lunch_and_weekly_day_off(self):
+    async def test_global_hours_master_break_and_weekly_day_off(self):
         weekday = datetime.fromisoformat(self.day).weekday()
         await self.db.set_setting("work_start", "09:00")
         await self.db.set_setting("work_end", "20:00")
         await self.db.set_setting("last_slot", "19:00")
-        await self.db.set_setting("lunch_start", "13:00")
-        await self.db.set_setting("lunch_end", "14:00")
+        await self.db.update_master(
+            self.master["id"], break_start="13:00", break_end="14:00"
+        )
 
-        # Старые индивидуальные перерывы больше не влияют на слоты.
+        # Старые перерывы по дням больше не влияют на слоты.
         await self.db.add_master_break(self.master["id"], weekday, "15:00", "16:00")
         slots = await self.db.available_slots(self.day, 30, master_id=self.master["id"])
         for blocked in ("13:00", "13:30"):
