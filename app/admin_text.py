@@ -95,10 +95,10 @@ def setting_validate(ctx: Ctx, key: str, raw: str, settings: dict) -> tuple[Opti
     lunch_start = hhmm_to_min(settings.get("lunch_start", "13:00"))
     lunch_end = hhmm_to_min(settings.get("lunch_end", "14:00"))
     if key == "work_start":
-        boundary = min(last_slot, work_end)
-        if lunch_start >= 0:
-            boundary = min(boundary, lunch_start)
-        if not (minutes < boundary):
+        if not (
+            minutes < min(last_slot, work_end)
+            and (lunch_start < 0 or minutes <= lunch_start)
+        ):
             return None, "Открытие должно быть раньше обеда, последнего слота и закрытия."
     elif key == "last_slot":
         if not (work_start < minutes < work_end):
@@ -108,10 +108,10 @@ def setting_validate(ctx: Ctx, key: str, raw: str, settings: dict) -> tuple[Opti
         if not (minutes > boundary):
             return None, "Закрытие должно быть позже обеда и последнего старта."
     elif key == "lunch_start":
-        if not (work_start < minutes < lunch_end <= work_end):
+        if not (work_start <= minutes < lunch_end <= work_end):
             return None, "Начало обеда должно быть между открытием и концом обеда."
     elif key == "lunch_end":
-        if not (work_start < lunch_start < minutes <= work_end):
+        if not (work_start <= lunch_start < minutes <= work_end):
             return None, "Конец обеда должен быть позже начала обеда и не позже закрытия."
     return value, None
 
