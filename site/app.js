@@ -1504,12 +1504,13 @@
           return;
         }
         grid.innerHTML = masters.map(function (master) {
-          var media = master.photo_url
+          var hasPhoto = !!master.photo_url;
+          var media = hasPhoto
             ? '<img src="' + escapeHtml(master.photo_url) + '" alt="' + escapeHtml(master.name) + ', барбер" loading="lazy" decoding="async">'
             : '<span>' + escapeHtml(initialsFromName(master.name)) + '</span>';
           return '' +
             '<article class="master">' +
-              '<div class="master__media">' + media + '</div>' +
+              '<div class="master__media' + (hasPhoto ? ' master__media--photo' : ' master__media--empty') + '">' + media + '</div>' +
               '<div class="master__body">' +
                 '<span class="master__role">Барбер</span>' +
                 '<h3>' + escapeHtml(master.name) + '</h3>' +
