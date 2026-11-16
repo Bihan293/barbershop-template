@@ -34,6 +34,8 @@ DEFAULT_SETTINGS = {
     "work_start": "10:00",
     "work_end": "21:00",
     "last_slot": "20:00",
+    "lunch_start": "13:00",
+    "lunch_end": "14:00",
     "reminder_minutes": "120",
     "privacy_updated": "15.11.2026",
     "stat_years": "5",
@@ -90,7 +92,8 @@ async def load_slot_context(executor: Any, day: str) -> dict[str, Any]:
         "SELECT * FROM masters WHERE active=1 ORDER BY sort, id"
     )
     schedules = await executor.fetchall("SELECT * FROM master_schedules")
-    breaks = await executor.fetchall("SELECT * FROM master_breaks")
+    # Индивидуальные перерывы мастеров больше не используются: обед общий из настроек.
+    breaks: list[dict] = []
     days_off_rows = await executor.fetchall(
         "SELECT master_id, date FROM master_days_off WHERE date=?", (day,)
     )
@@ -335,8 +338,6 @@ class Database:
             master_id = await self.add_master(
                 name=name,
                 description=description,
-                lunch_start="14:00",
-                lunch_end="15:00",
             )
             master_row = await self.get_master(master_id)
 
@@ -652,8 +653,6 @@ class Database:
         description: str = "",
         photo: str = "",
         active: int = 1,
-        lunch_start: str = "",
-        lunch_end: str = "",
     ) -> int:
         settings = await self.get_settings()
         work_start = settings.get("work_start", "10:00")
@@ -686,18 +685,6 @@ class Database:
                         "lunch_end": "",
                     },
                 )
-                if lunch_start and lunch_end and hhmm_to_min(lunch_end, -1) > hhmm_to_min(lunch_start, -1):
-                    await conn.insert(
-                        "master_breaks",
-                        {
-                            "master_id": master_id,
-                            "weekday": weekday,
-                            "break_start": lunch_start,
-                            "break_end": lunch_end,
-                            "title": "Обед",
-                            "created_at": now,
-                        },
-                    )
         return master_id
 
     async def update_master(self, master_id: int, **fields: Any) -> None:

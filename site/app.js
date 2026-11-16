@@ -553,12 +553,16 @@
         var start = parseMinutes(settings.work_start || '10:00');
         var last = parseMinutes(settings.last_slot || '20:00');
         var end = parseMinutes(settings.work_end || '21:00');
+        var lunchStart = settings.lunch_start ? parseMinutes(settings.lunch_start) : -1;
+        var lunchEnd = settings.lunch_end ? parseMinutes(settings.lunch_end) : -1;
+        var hasLunch = lunchStart >= 0 && lunchEnd > lunchStart;
         if (!day || day < isoDay(0) || day > isoDay(60)) return [];
         var now = new Date();
         var nowMinutes = now.getHours() * 60 + now.getMinutes();
         var slots = [];
         for (var t = start; t <= last; t += step) {
           if (day === isoDay(0) && t <= nowMinutes + 15) continue;
+          if (hasLunch && t < lunchEnd && t + duration > lunchStart) continue;
           if (t + duration <= end) {
             slots.push(String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'));
           }

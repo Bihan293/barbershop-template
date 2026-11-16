@@ -19,7 +19,8 @@ async def master_today_state(ctx: Ctx, master: dict) -> str:
     schedule = await ctx.db.get_master_schedule_day(int(master["id"]), now.weekday())
     if not schedule or not int(schedule.get("enabled") or 0):
         return "сегодня выходной"
-    return f"сегодня {schedule['work_start']}–{schedule['work_end']}"
+    settings = await ctx.db.get_settings()
+    return f"сегодня {settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}"
 
 
 async def masters_screen(ctx: Ctx) -> tuple[str, Kb]:
@@ -46,7 +47,9 @@ async def masters_screen(ctx: Ctx) -> tuple[str, Kb]:
     return "\n".join(lines), Kb(rows)
 
 
-def master_detail_text(master: dict, schedules: list[dict], days_off: list[dict], today_state: str) -> str:
+def master_detail_text(
+    master: dict, schedules: list[dict], days_off: list[dict], today_state: str, settings: dict
+) -> str:
     weekly_off = [WEEKDAYS[int(row["weekday"])] for row in schedules if not int(row.get("enabled") or 0)]
     lines = [
         f"👨‍💈 <b>{esc(master['name'])}</b>",
@@ -56,15 +59,14 @@ def master_detail_text(master: dict, schedules: list[dict], days_off: list[dict]
         f"{esc(master.get('description')) or 'Без описания'}",
         "",
         f"🖼 Фото: {'есть' if master.get('photo') else 'нет'}",
+        "",
+        f"🕘 Часы салона: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>",
+        f"🍽 Обед: <b>{settings.get('lunch_start', '13:00')}–{settings.get('lunch_end', '14:00')}</b>",
         f"🚫 Постоянные выходные: {', '.join(weekly_off) if weekly_off else 'нет'}",
         "",
-        "<b>График на неделю</b>",
+        "Часы работы и обед общие для всех мастеров и меняются в «Настройках».",
+        "",
     ]
-    by_day = {int(row["weekday"]): row for row in schedules}
-    for weekday, title in enumerate(WEEKDAY_TITLES):
-        row = by_day.get(weekday)
-        lines.append(f"{WEEKDAYS[weekday]} · {esc(schedule_label(row) if row else 'не задан')}")
-    lines.append("")
     if days_off:
         lines.append("<b>Ближайшие выходные</b>")
         for item in days_off[:5]:
@@ -94,7 +96,6 @@ def master_detail_kb(master: dict, today_off: bool = False) -> Kb:
     if master.get("photo"):
         rows.append([Btn("🗑 Удалить фото", callback_data=f"adm:mst_photo_del:{mid}")])
     rows += [
-        [Btn("📅 График на неделю", callback_data=f"adm:mst_sched:{mid}")],
         [Btn("🚫 Выходные по дням", callback_data=f"adm:mst_weekoff:{mid}")],
         [Btn("🌴 Разовые выходные", callback_data=f"adm:mst_days:{mid}")],
         [Btn("🗑 Удалить мастера", callback_data=f"adm:mst_del:{mid}")],
@@ -112,7 +113,8 @@ async def show_master_detail(ctx: Ctx, q, master_id: int, suffix: str = "") -> N
     days_off = await ctx.db.list_days_off(master_id)
     today_state = await master_today_state(ctx, master)
     today_off = bool(await ctx.db.get_day_off(master_id, datetime.now(ctx.cfg.tz).date().isoformat()))
-    text = master_detail_text(master, schedules, days_off, today_state)
+    settings = await ctx.db.get_settings()
+    text = master_detail_text(master, schedules, days_off, today_state, settings)
     if suffix:
         text += "\n\n" + suffix
     await replace_admin_screen(

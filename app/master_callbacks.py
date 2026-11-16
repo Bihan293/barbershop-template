@@ -39,6 +39,18 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
     if action not in {"masters", "mst"} and not action.startswith("mst_"):
         return False
 
+    if action in {
+        "mst_sched", "mst_day", "mst_day_toggle", "mst_day_edit",
+        "mst_sched_save", "mst_day_nolunch", "mst_break_add",
+        "mst_break_save", "mst_break_del", "mst_break_delok",
+    }:
+        await safe_answer(
+            q,
+            "Часы и обед теперь общие: Настройки → Часы работы / Обед.",
+            show_alert=True,
+        )
+        return True
+
     if action == "masters":
         ctx.flows.clear(uid)
         text, kb = await masters_screen(ctx)
@@ -98,7 +110,7 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
             ctx,
             q,
             master_id,
-            suffix="✅ Мастер добавлен. Проверьте график и при необходимости измените часы.",
+            suffix="✅ Мастер добавлен. Часы работы и обед — общие, из «Настроек».",
         )
         return True
 

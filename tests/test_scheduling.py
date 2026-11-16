@@ -28,11 +28,21 @@ def schedule(master_id=1, **overrides):
     return row
 
 
-def slots(*, orders=None, masters=None, schedules=None, days_off=None, master_id=None, duration=30, breaks=None):
+def slots(*, orders=None, masters=None, schedules=None, days_off=None, master_id=None, duration=30, breaks=None, settings=None):
+    base_settings = {
+        "slot_step": "30",
+        "work_start": "10:00",
+        "work_end": "21:00",
+        "last_slot": "20:00",
+        "lunch_start": "",
+        "lunch_end": "",
+    }
+    if settings:
+        base_settings.update(settings)
     return compute_slots(
         day="2026-11-16",
         duration=duration,
-        settings={"slot_step": "30", "last_slot": "20:00"},
+        settings=base_settings,
         masters=masters if masters is not None else [master()],
         schedules=schedules if schedules is not None else [schedule()],
         days_off=days_off or set(),
@@ -59,11 +69,16 @@ class SchedulingTests(unittest.TestCase):
         self.assertNotIn("17:00", result)
         self.assertIn("17:30", result)
 
-    def test_lunch_blocks_overlapping_starts(self):
-        result = slots(schedules=[schedule(lunch_start="14:00", lunch_end="15:00")])
+    def test_global_lunch_blocks_overlapping_starts(self):
+        result = slots(settings={"lunch_start": "14:00", "lunch_end": "15:00"})
         self.assertIn("13:30", result)
         self.assertNotIn("14:00", result)
         self.assertIn("15:00", result)
+
+    def test_global_hours_ignore_master_schedule_hours(self):
+        result = slots(schedules=[schedule(work_start="08:00", work_end="12:00")])
+        self.assertIn("10:00", result)
+        self.assertIn("20:00", result)
 
     def test_day_off_hides_master(self):
         result = slots(days_off={(1, "2026-11-16")})
@@ -86,19 +101,25 @@ class SchedulingTests(unittest.TestCase):
         self.assertIn("17:00", result)  # свободен у второго мастера
         self.assertIn("18:00", result)
 
-    def test_multiple_breaks_block_all_intervals(self):
+    def test_old_master_breaks_are_ignored(self):
         result = slots(
             breaks=[
                 {"master_id": 1, "weekday": 0, "break_start": "12:00", "break_end": "13:00"},
                 {"master_id": 1, "weekday": 0, "break_start": "15:00", "break_end": "16:00"},
             ]
         )
-        self.assertNotIn("12:00", result)
-        self.assertIn("11:30", result)
-        self.assertIn("13:00", result)
-        self.assertNotIn("15:00", result)
-        self.assertNotIn("15:30", result)
-        self.assertIn("16:00", result)
+        self.assertIn("12:00", result)
+        self.assertIn("15:00", result)
+
+    def test_global_lunch_applies_to_all_masters(self):
+        result = slots(
+            masters=[master(1), master(2)],
+            schedules=[schedule(1), schedule(2)],
+            settings={"lunch_start": "13:00", "lunch_end": "14:00"},
+        )
+        self.assertNotIn("13:00", result)
+        self.assertNotIn("13:30", result)
+        self.assertIn("14:00", result)
 
     def test_specific_master_is_respected(self):
         result = slots(

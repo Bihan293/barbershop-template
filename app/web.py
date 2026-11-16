@@ -92,7 +92,13 @@ async def site_payload(ctx: Ctx, request: web.Request) -> dict:
                 "name": master["name"],
                 "description": master["description"],
                 "photo_url": media_url(ctx.cfg, master["photo"], request),
-                "hours": public_schedule_label(schedule),
+                "hours": public_schedule_label(
+                    schedule,
+                    work_start=settings.get("work_start", "10:00"),
+                    work_end=settings.get("work_end", "21:00"),
+                    lunch_start=settings.get("lunch_start", ""),
+                    lunch_end=settings.get("lunch_end", ""),
+                ),
             }
         )
 
@@ -141,8 +147,8 @@ async def site_payload(ctx: Ctx, request: web.Request) -> dict:
         "contacts": {
             "address": settings.get("address", ""),
             "address_note": settings.get("address_note", ""),
-            "hours": settings.get("hours", ""),
-            "hours_note": settings.get("hours_note", ""),
+            "hours": settings_hours_text(settings),
+            "hours_note": settings_hours_note(settings),
             "phone": settings.get("phone", ""),
             "phone_digits": phone_digits(settings.get("phone", "")),
             "whatsapp": whatsapp_digits(settings),
@@ -157,6 +163,8 @@ async def site_payload(ctx: Ctx, request: web.Request) -> dict:
             "work_start": settings.get("work_start", "10:00"),
             "work_end": settings.get("work_end", "21:00"),
             "last_slot": settings.get("last_slot", "20:00"),
+            "lunch_start": settings.get("lunch_start", ""),
+            "lunch_end": settings.get("lunch_end", ""),
         },
     }
 

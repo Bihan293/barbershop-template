@@ -92,22 +92,36 @@ def setting_validate(ctx: Ctx, key: str, raw: str, settings: dict) -> tuple[Opti
     work_start = hhmm_to_min(settings.get("work_start", "10:00"))
     last_slot = hhmm_to_min(settings.get("last_slot", "20:00"))
     work_end = hhmm_to_min(settings.get("work_end", "21:00"))
+    lunch_start = hhmm_to_min(settings.get("lunch_start", "13:00"))
+    lunch_end = hhmm_to_min(settings.get("lunch_end", "14:00"))
     if key == "work_start":
-        if not (minutes < min(last_slot, work_end)):
-            return None, "Начало должно быть раньше последнего слота и конца дня."
+        boundary = min(last_slot, work_end)
+        if lunch_start >= 0:
+            boundary = min(boundary, lunch_start)
+        if not (minutes < boundary):
+            return None, "Открытие должно быть раньше обеда, последнего слота и закрытия."
     elif key == "last_slot":
         if not (work_start < minutes < work_end):
-            return None, "Последний слот должен быть между началом и концом дня."
+            return None, "Последний старт должен быть между открытием и закрытием."
     elif key == "work_end":
-        if not (minutes > last_slot):
-            return None, "Конец дня должен быть позже последнего слота."
+        boundary = max(last_slot, lunch_end if lunch_end >= 0 else last_slot)
+        if not (minutes > boundary):
+            return None, "Закрытие должно быть позже обеда и последнего старта."
+    elif key == "lunch_start":
+        if not (work_start < minutes < lunch_end <= work_end):
+            return None, "Начало обеда должно быть между открытием и концом обеда."
+    elif key == "lunch_end":
+        if not (work_start < lunch_start < minutes <= work_end):
+            return None, "Конец обеда должен быть позже начала обеда и не позже закрытия."
     return value, None
 
 
 SETTING_LABELS = {
-    "work_start": "Начало дня по умолчанию",
-    "last_slot": "Общий предел старта",
-    "work_end": "Конец дня по умолчанию",
+    "work_start": "Открытие салона",
+    "work_end": "Закрытие салона",
+    "lunch_start": "Начало общего обеда",
+    "lunch_end": "Конец общего обеда",
+    "last_slot": "Последний старт записи",
     "reminder_minutes": "Напоминание, минут",
     "privacy_updated": "Дата редакции политики",
 }

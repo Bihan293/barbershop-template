@@ -245,21 +245,34 @@ class DatabaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(counts.get("telegram"), 1)
         self.assertEqual(counts.get("admin"), 1)
 
-    async def test_multiple_breaks_and_weekly_day_off(self):
+    async def test_global_hours_lunch_and_weekly_day_off(self):
         weekday = datetime.fromisoformat(self.day).weekday()
-        await self.db.add_master_break(self.master["id"], weekday, "12:00", "13:00")
+        await self.db.set_setting("work_start", "09:00")
+        await self.db.set_setting("work_end", "20:00")
+        await self.db.set_setting("last_slot", "19:00")
+        await self.db.set_setting("lunch_start", "13:00")
+        await self.db.set_setting("lunch_end", "14:00")
+
+        # Старые индивидуальные перерывы больше не влияют на слоты.
         await self.db.add_master_break(self.master["id"], weekday, "15:00", "16:00")
-        breaks = await self.db.list_master_breaks(self.master["id"], weekday)
-        self.assertEqual(len(breaks), 3)  # 14:00–15:00 по умолчанию + два новых
-        self.assertTrue(
-            await self.db.master_has_break_overlap(self.master["id"], weekday, "12:30", "12:45")
-        )
         slots = await self.db.available_slots(self.day, 30, master_id=self.master["id"])
-        for blocked in ("12:00", "12:30", "14:00", "15:00", "15:30"):
+        for blocked in ("13:00", "13:30"):
             self.assertNotIn(blocked, slots)
-        for free in ("11:30", "13:00", "16:00"):
+        for free in ("12:30", "14:00", "15:00", "19:00"):
             self.assertIn(free, slots)
 
+        # Индивидуальные часы мастера игнорируются — работают общие настройки.
+        await self.db.save_master_schedule(
+            self.master["id"],
+            weekday,
+            enabled=1,
+            start="08:00",
+            end="12:00",
+        )
+        slots = await self.db.available_slots(self.day, 30, master_id=self.master["id"])
+        self.assertIn("19:00", slots)
+
+        # Выходной по дню недели по-прежнему работает.
         await self.db.save_master_schedule(
             self.master["id"],
             weekday,

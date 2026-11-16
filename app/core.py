@@ -297,6 +297,24 @@ def initials(name: str) -> str:
     return (parts[0][0] + parts[1][0]).upper()
 
 
+def settings_hours_text(settings: dict) -> str:
+    start = str(settings.get("work_start") or "10:00")
+    end = str(settings.get("work_end") or "21:00")
+    return f"Ежедневно, {start}–{end}"
+
+
+def settings_hours_note(settings: dict) -> str:
+    parts: list[str] = []
+    lunch_start = str(settings.get("lunch_start") or "")
+    lunch_end = str(settings.get("lunch_end") or "")
+    if lunch_start and lunch_end:
+        parts.append(f"Обед: {lunch_start}–{lunch_end}")
+    last_slot = str(settings.get("last_slot") or "")
+    if last_slot:
+        parts.append(f"Последняя запись — в {last_slot}")
+    return " · ".join(parts)
+
+
 def clean_text(value: Any, max_len: int = 300) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     return text[:max_len]
