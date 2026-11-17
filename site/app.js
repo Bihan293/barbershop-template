@@ -1510,7 +1510,7 @@
             : '<span>' + escapeHtml(initialsFromName(master.name)) + '</span>';
           return '' +
             '<article class="master">' +
-              '<div class="master__media' + (hasPhoto ? ' master__media--photo' : ' master__media--empty') + '">' + media + '</div>' +
+              '<div class="master__media' + (hasPhoto ? ' master__media--photo' : ' master__media--empty') + '" data-initials="' + escapeHtml(initialsFromName(master.name)) + '">' + media + '</div>' +
               '<div class="master__body">' +
                 '<span class="master__role">Барбер</span>' +
                 '<h3>' + escapeHtml(master.name) + '</h3>' +
@@ -1520,6 +1520,15 @@
               '</div>' +
             '</article>';
         }).join('');
+        grid.querySelectorAll('.master__media--photo img').forEach(function (img) {
+          img.addEventListener('error', function () {
+            var media = img.parentElement;
+            if (!media) return;
+            media.classList.remove('master__media--photo');
+            media.classList.add('master__media--empty');
+            media.innerHTML = '<span>' + escapeHtml(media.getAttribute('data-initials') || 'Б') + '</span>';
+          });
+        });
       }
 
       function rebuildMasterSelect(masters) {

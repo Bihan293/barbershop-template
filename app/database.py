@@ -1003,7 +1003,7 @@ class Database:
         )
         return {"count": int(row["count"]) if row else 0, "total": int(row["total"]) if row else 0}
 
-    async def list_orders(self, filter_name: str = "upcoming", limit: int = 8, offset: int = 0) -> list[dict]:
+    async def list_orders(self, filter_name: str = "upcoming", limit: int = 7, offset: int = 0) -> list[dict]:
         now = datetime.now(self.tz)
         today = now.date().isoformat()
         current = now.strftime("%H:%M")
@@ -1014,7 +1014,16 @@ class Database:
             sql = "SELECT * FROM orders WHERE date=? ORDER BY time, id LIMIT ? OFFSET ?"
             params = (today, limit, offset)
         elif filter_name == "all":
-            sql = "SELECT * FROM orders ORDER BY id DESC LIMIT ? OFFSET ?"
+            sql = (
+                "SELECT * FROM orders WHERE status IN ('new','confirmed') "
+                "ORDER BY date DESC, time DESC, id DESC LIMIT ? OFFSET ?"
+            )
+            params = (limit, offset)
+        elif filter_name == "archive":
+            sql = (
+                "SELECT * FROM orders WHERE status IN ('completed','cancelled') "
+                "ORDER BY date DESC, time DESC, id DESC LIMIT ? OFFSET ?"
+            )
             params = (limit, offset)
         else:
             sql = (

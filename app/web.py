@@ -66,12 +66,14 @@ def public_base(cfg: Config, request: Optional[web.Request] = None) -> str:
 
 
 def media_url(cfg: Config, relative: str, request: Optional[web.Request] = None) -> str:
+    # Относительный путь работает с любым доменом Railway и не ломается,
+    # если PUBLIC_URL ещё не настроен или временно указывает не туда.
     if not relative:
         return ""
     if relative.startswith("http://") or relative.startswith("https://"):
         return relative
     relative = relative.lstrip("/")
-    return f"{public_base(cfg, request)}/media/{relative}"
+    return f"/media/{relative}"
 
 
 async def site_payload(ctx: Ctx, request: web.Request) -> dict:

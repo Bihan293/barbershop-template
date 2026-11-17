@@ -1520,7 +1520,8 @@
     .master__media--empty{
       display:grid;
       place-items:center;
-      aspect-ratio:4/5;
+      min-height:104px;
+      aspect-ratio:16/5;
       background:
         radial-gradient(120% 90% at 30% 10%,rgba(var(--accent-rgb),.28),transparent 60%),
         linear-gradient(160deg,var(--surface-deep-2),var(--surface-deep));
