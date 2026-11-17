@@ -553,12 +553,17 @@
         var start = parseMinutes(settings.work_start || '10:00');
         var last = parseMinutes(settings.last_slot || '20:00');
         var end = parseMinutes(settings.work_end || '21:00');
+        var selectedMaster = findMaster(masterSelect ? masterSelect.value : '');
+        var lunchStart = selectedMaster && selectedMaster.break_start ? parseMinutes(selectedMaster.break_start) : -1;
+        var lunchEnd = selectedMaster && selectedMaster.break_end ? parseMinutes(selectedMaster.break_end) : -1;
+        var hasLunch = lunchStart >= 0 && lunchEnd > lunchStart;
         if (!day || day < isoDay(0) || day > isoDay(60)) return [];
         var now = new Date();
         var nowMinutes = now.getHours() * 60 + now.getMinutes();
         var slots = [];
         for (var t = start; t <= last; t += step) {
           if (day === isoDay(0) && t <= nowMinutes + 15) continue;
+          if (hasLunch && t < lunchEnd && t + duration > lunchStart) continue;
           if (t + duration <= end) {
             slots.push(String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'));
           }
@@ -1499,12 +1504,13 @@
           return;
         }
         grid.innerHTML = masters.map(function (master) {
-          var media = master.photo_url
+          var hasPhoto = !!master.photo_url;
+          var media = hasPhoto
             ? '<img src="' + escapeHtml(master.photo_url) + '" alt="' + escapeHtml(master.name) + ', барбер" loading="lazy" decoding="async">'
             : '<span>' + escapeHtml(initialsFromName(master.name)) + '</span>';
           return '' +
             '<article class="master">' +
-              '<div class="master__media">' + media + '</div>' +
+              '<div class="master__media' + (hasPhoto ? ' master__media--photo' : ' master__media--empty') + '">' + media + '</div>' +
               '<div class="master__body">' +
                 '<span class="master__role">Барбер</span>' +
                 '<h3>' + escapeHtml(master.name) + '</h3>' +
@@ -1877,6 +1883,14 @@
         });
       }
 
+      function syncThemeColor() {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        var bg = getComputedStyle(document.documentElement)
+          .getPropertyValue('--bg').trim();
+        if (bg) meta.content = bg;
+      }
+
       var logoFitTimer = null;
       window.addEventListener('resize', function () {
         window.clearTimeout(logoFitTimer);
@@ -1886,6 +1900,7 @@
         document.fonts.ready.then(fitHeaderLogo).catch(function () {});
       }
       fitHeaderLogo();
+      syncThemeColor();
 
       buildDateOptions();
       renderServicePicker();

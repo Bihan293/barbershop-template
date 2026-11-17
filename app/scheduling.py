@@ -183,8 +183,16 @@ def compute_slots(
         if not active_masters:
             return []
 
+    # Часы работы — единые для всех мастеров, из настроек.
+    # Перерыв — индивидуальный у каждого мастера, но один на все дни.
+    work_start = settings.get("work_start", "10:00")
+    work_end = settings.get("work_end", "21:00")
+    work_start_min = hhmm_to_min(work_start, -1)
+    work_end_min = hhmm_to_min(work_end, -1)
+    if work_start_min < 0 or work_end_min <= work_start_min:
+        return []
+
     schedule_index = _schedule_index(schedules)
-    break_index = _break_index(breaks)
     orders_index = _orders_by_master(orders)
     result: set[str] = set()
 
@@ -192,10 +200,29 @@ def compute_slots(
         mid = _as_int(master.get("id"), -1)
         if mid < 0:
             continue
+        schedule = schedule_index.get((mid, weekday))
+        if not schedule:
+            continue
+        effective_schedule = dict(schedule)
+        effective_schedule["work_start"] = work_start
+        effective_schedule["work_end"] = work_end
+        effective_schedule["lunch_start"] = ""
+        effective_schedule["lunch_end"] = ""
+        break_start = str(master.get("break_start") or "")
+        break_end = str(master.get("break_end") or "")
+        break_start_min = hhmm_to_min(break_start, -1)
+        break_end_min = hhmm_to_min(break_end, -1)
+        master_breaks: list[dict] = []
+        if (
+            break_start_min >= work_start_min
+            and break_end_min > break_start_min
+            and break_end_min <= work_end_min
+        ):
+            master_breaks = [{"break_start": break_start, "break_end": break_end}]
         slots = master_slots(
             master=master,
-            schedule=schedule_index.get((mid, weekday)),
-            breaks=break_index.get((mid, weekday), []),
+            schedule=effective_schedule,
+            breaks=master_breaks,
             day_off=(mid, day) in days_off,
             orders=orders_index.get(mid, []),
             day=day,
@@ -243,13 +270,21 @@ def week_schedule_text(schedules: Iterable[dict]) -> str:
     return " · ".join(parts)
 
 
-def public_schedule_label(schedules: Iterable[dict]) -> str:
-    """Компактная подпись графика для сайта: «пн–пт 10:00–21:00 · вс выходной»."""
+def public_schedule_label(
+    schedules: Iterable[dict],
+    *,
+    work_start: str = "10:00",
+    work_end: str = "21:00",
+    lunch_start: str = "",
+    lunch_end: str = "",
+) -> str:
+    """Компактная подпись графика для сайта: «пн–сб 10:00–21:00 · вс выходной»."""
     by_day = {_as_int(row.get("weekday"), -1): row for row in schedules}
     labels = []
     for index in range(7):
         row = by_day.get(index)
-        labels.append(schedule_label(row) if row else "не задан")
+        working = bool(row and _as_int(row.get("enabled"), 1))
+        labels.append(f"{work_start}–{work_end}" if working else "выходной")
 
     groups: list[tuple[int, int, str]] = []
     start = 0
@@ -261,12 +296,14 @@ def public_schedule_label(schedules: Iterable[dict]) -> str:
 
     parts = []
     for first, last, label in groups:
-        if first == last:
-            days = WEEKDAYS[first]
-        elif last == first + 1:
-            days = f"{WEEKDAYS[first]}, {WEEKDAYS[last]}"
-        else:
-            days = f"{WEEKDAYS[first]}–{WEEKDAYS[last]}"
-        parts.append(f"{days} {label}")
-    return " · ".join(parts)
+        day_label = WEEKDAYS[first] if first == last else f"{WEEKDAYS[first]}–{WEEKDAYS[last]}"
+        parts.append(f"{day_label} {label}")
+    result = " · ".join(parts)
+    lunch_from = hhmm_to_min(lunch_start, -1)
+    lunch_to = hhmm_to_min(lunch_end, -1)
+    work_from = hhmm_to_min(work_start, -1)
+    work_to = hhmm_to_min(work_end, -1)
+    if lunch_from >= work_from and lunch_to > lunch_from and lunch_to <= work_to:
+        result += f" · обед {lunch_start}–{lunch_end}"
+    return result
 

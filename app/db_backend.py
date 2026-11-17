@@ -160,6 +160,15 @@ class SqliteBackend:
                 LOG.info("Миграция SQLite: orders.%s", column)
                 await self._db.execute(f"ALTER TABLE orders ADD COLUMN {column} {ddl}")
 
+        master_columns = await self._columns("masters")
+        for column, ddl in {
+            "break_start": "TEXT NOT NULL DEFAULT ''",
+            "break_end": "TEXT NOT NULL DEFAULT ''",
+        }.items():
+            if column not in master_columns:
+                LOG.info("Миграция SQLite: masters.%s", column)
+                await self._db.execute(f"ALTER TABLE masters ADD COLUMN {column} {ddl}")
+
         schedule_columns = await self._columns("master_schedules")
         if "start" in schedule_columns and "work_start" not in schedule_columns:
             LOG.info("Миграция SQLite: master_schedules.start → work_start")
@@ -304,6 +313,12 @@ class PostgresBackend:
             await conn.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS master_name TEXT NOT NULL DEFAULT ''")
             await conn.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS consent_at TEXT NOT NULL DEFAULT ''")
             await conn.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS public_token TEXT NOT NULL DEFAULT ''")
+            await conn.execute(
+                "ALTER TABLE masters ADD COLUMN IF NOT EXISTS break_start TEXT NOT NULL DEFAULT ''"
+            )
+            await conn.execute(
+                "ALTER TABLE masters ADD COLUMN IF NOT EXISTS break_end TEXT NOT NULL DEFAULT ''"
+            )
             legacy_start = await conn.fetchrow(
                 "SELECT column_name FROM information_schema.columns "
                 "WHERE table_name='master_schedules' AND column_name='start'"

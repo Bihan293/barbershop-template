@@ -90,7 +90,8 @@ async def load_slot_context(executor: Any, day: str) -> dict[str, Any]:
         "SELECT * FROM masters WHERE active=1 ORDER BY sort, id"
     )
     schedules = await executor.fetchall("SELECT * FROM master_schedules")
-    breaks = await executor.fetchall("SELECT * FROM master_breaks")
+    # Индивидуальные перерывы мастеров больше не используются: обед общий из настроек.
+    breaks: list[dict] = []
     days_off_rows = await executor.fetchall(
         "SELECT master_id, date FROM master_days_off WHERE date=?", (day,)
     )
@@ -134,6 +135,7 @@ class Database:
         await self.backend.connect()
         await self._migrate_legacy_lunches()
         await self._seed()
+        await self._migrate_master_common_break()
 
     async def close(self) -> None:
         await self.backend.close()
@@ -203,6 +205,37 @@ class Database:
         await self.execute(
             "UPDATE master_schedules SET lunch_start='', lunch_end='' "
             "WHERE lunch_start<>'' OR lunch_end<>''"
+        )
+
+    async def _migrate_master_common_break(self) -> None:
+        """Старые перерывы по дням → один общий перерыв мастера на все дни."""
+        done = await self.fetchone(
+            "SELECT value FROM meta WHERE key='master_common_break_migrated'"
+        )
+        if done:
+            return
+        masters = await self.list_masters()
+        for master in masters:
+            if str(master.get("break_start") or "") or str(master.get("break_end") or ""):
+                continue
+            row = await self.fetchone(
+                "SELECT break_start, break_end FROM master_breaks "
+                "WHERE master_id=? AND break_start<>'' AND break_end<>'' "
+                "ORDER BY weekday, id LIMIT 1",
+                (int(master["id"]),),
+            )
+            if not row:
+                continue
+            start = str(row["break_start"] or "")
+            end = str(row["break_end"] or "")
+            if hhmm_to_min(start, -1) >= 0 and hhmm_to_min(end, -1) > hhmm_to_min(start, -1):
+                await self.execute(
+                    "UPDATE masters SET break_start=?, break_end=? WHERE id=?",
+                    (start, end, int(master["id"])),
+                )
+        await self.execute(
+            "INSERT INTO meta(key, value) VALUES('master_common_break_migrated', '1') "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
         )
 
     async def _seed(self) -> None:
@@ -335,8 +368,6 @@ class Database:
             master_id = await self.add_master(
                 name=name,
                 description=description,
-                lunch_start="14:00",
-                lunch_end="15:00",
             )
             master_row = await self.get_master(master_id)
 
@@ -652,8 +683,8 @@ class Database:
         description: str = "",
         photo: str = "",
         active: int = 1,
-        lunch_start: str = "",
-        lunch_end: str = "",
+        break_start: str = "13:00",
+        break_end: str = "14:00",
     ) -> int:
         settings = await self.get_settings()
         work_start = settings.get("work_start", "10:00")
@@ -670,6 +701,8 @@ class Database:
                     "photo": photo,
                     "active": active,
                     "sort": sort,
+                    "break_start": break_start,
+                    "break_end": break_end,
                     "created_at": now,
                 },
             )
@@ -686,22 +719,10 @@ class Database:
                         "lunch_end": "",
                     },
                 )
-                if lunch_start and lunch_end and hhmm_to_min(lunch_end, -1) > hhmm_to_min(lunch_start, -1):
-                    await conn.insert(
-                        "master_breaks",
-                        {
-                            "master_id": master_id,
-                            "weekday": weekday,
-                            "break_start": lunch_start,
-                            "break_end": lunch_end,
-                            "title": "Обед",
-                            "created_at": now,
-                        },
-                    )
         return master_id
 
     async def update_master(self, master_id: int, **fields: Any) -> None:
-        allowed = {"name", "description", "photo", "active", "sort"}
+        allowed = {"name", "description", "photo", "active", "sort", "break_start", "break_end"}
         data = {key: value for key, value in fields.items() if key in allowed}
         if not data:
             return
@@ -887,6 +908,30 @@ class Database:
             if old_start >= 0 and old_end > old_start and new_start < old_end and old_start < new_end:
                 return True
         return False
+
+    async def master_break_conflicts_all(
+        self, master_id: int, start: str, end: str
+    ) -> list[dict]:
+        """Будущие записи мастера, которые пересекутся с общим перерывом."""
+        new_start = hhmm_to_min(start, -1)
+        new_end = hhmm_to_min(end, -1)
+        if new_start < 0 or new_end <= new_start:
+            return []
+        today = datetime.now(self.tz).date().isoformat()
+        rows = await self.fetchall(
+            "SELECT id, date, time, duration, service_name FROM orders "
+            "WHERE master_id=? AND status IN ('new','confirmed') AND date>=?",
+            (master_id, today),
+        )
+        result = []
+        for row in rows:
+            order_start = hhmm_to_min(row.get("time", ""), -1)
+            if order_start < 0:
+                continue
+            order_end = order_start + max(5, int(row.get("duration") or 30))
+            if overlaps(new_start, new_end - new_start, order_start, order_end - order_start):
+                result.append(dict(row))
+        return result
 
     async def get_day_off(self, master_id: int, day: str) -> Optional[dict]:
         return await self.fetchone(

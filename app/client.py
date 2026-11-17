@@ -11,7 +11,9 @@ async def client_home_text(ctx: Ctx) -> str:
     return (
         f"💈 <b>{esc(settings.get('brand', 'ЛЕЗВИЕ'))}</b> · {esc(settings.get('city', 'Алматы'))}\n\n"
         f"{esc(settings.get('address', ''))}\n"
-        f"{esc(settings.get('hours', ''))}\n\n"
+        f"{esc(settings_hours_text(settings))}\n"
+        + (f"{esc(settings_hours_note(settings))}\n" if settings_hours_note(settings) else "")
+        + "\n"
         "Запишитесь за пару минут: выберите услугу, дату и время. "
         "Мастер подтвердит запись в выбранном мессенджере."
     )
@@ -118,8 +120,9 @@ async def client_contacts_text(ctx: Ctx) -> str:
         f"📍 {esc(settings.get('address', ''))}\n"
         + (f"{esc(settings.get('address_note', ''))}\n" if settings.get("address_note") else "")
         + "\n"
-        f"🕘 {esc(settings.get('hours', ''))}\n"
-        f"{esc(settings.get('hours_note', ''))}\n\n"
+        f"🕘 {esc(settings_hours_text(settings))}\n"
+        + (f"{esc(settings_hours_note(settings))}\n" if settings_hours_note(settings) else "")
+        + "\n"
         f"☎️ {esc(settings.get('phone', ''))}\n"
         f"💬 WhatsApp: {esc(display_phone(whatsapp_digits(settings)))}\n"
         f"🖼 Instagram: {esc(instagram_label(settings.get('instagram', '')))}"

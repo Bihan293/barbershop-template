@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .deps import *
 from .masters_ui import (
+    master_break_screen,
     master_day_screen,
     master_days_screen,
     master_schedule_screen,
@@ -39,6 +40,18 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
     if action not in {"masters", "mst"} and not action.startswith("mst_"):
         return False
 
+    if action in {
+        "mst_sched", "mst_day", "mst_day_toggle", "mst_day_edit",
+        "mst_sched_save", "mst_day_nolunch", "mst_break_add",
+        "mst_break_save", "mst_break_del", "mst_break_delok",
+    }:
+        await safe_answer(
+            q,
+            "Часы и обед теперь общие: Настройки → Часы работы / Обед.",
+            show_alert=True,
+        )
+        return True
+
     if action == "masters":
         ctx.flows.clear(uid)
         text, kb = await masters_screen(ctx)
@@ -48,6 +61,65 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
     if action == "mst" and len(parts) >= 3:
         ctx.flows.clear(uid)
         await show_master_detail(ctx, q, int(parts[2]))
+        return True
+
+    # ---------- общий перерыв мастера ----------
+    if action == "mst_break" and len(parts) >= 3:
+        ctx.flows.clear(uid)
+        text, kb = await master_break_screen(ctx, int(parts[2]))
+        await edit_q(q, text, kb)
+        return True
+
+    if action == "mst_break_edit" and len(parts) >= 3:
+        master_id = int(parts[2])
+        master = await ctx.db.get_master(master_id)
+        if not master:
+            await safe_answer(q, "Мастер не найден", show_alert=True)
+            return True
+        ctx.flows.set(uid, "mst_common_break_value", master_id=master_id)
+        await edit_q(
+            q,
+            "🍽 Введите перерыв в формате <b>13:00-14:00</b>.\n\n"
+            "Он будет действовать у этого мастера каждый день.\n"
+            "Отправьте «-», чтобы убрать перерыв.",
+            cancel_row(f"adm:mst_break:{master_id}"),
+        )
+        return True
+
+    if action == "mst_break_clear" and len(parts) >= 3:
+        master_id = int(parts[2])
+        master = await ctx.db.get_master(master_id)
+        if not master:
+            await safe_answer(q, "Мастер не найден", show_alert=True)
+            return True
+        await edit_q(
+            q,
+            f"🗑 <b>Убрать перерыв у мастера {esc(master['name'])}?</b>\n\n"
+            "Слоты в это время снова станут доступны.",
+            Kb([
+                [Btn("✅ Да, убрать", callback_data=f"adm:mst_break_clearok:{master_id}")],
+                [Btn("← Нет, назад", callback_data=f"adm:mst_break:{master_id}")],
+            ]),
+        )
+        return True
+
+    if action == "mst_break_clearok" and len(parts) >= 3:
+        master_id = int(parts[2])
+        await ctx.db.update_master(master_id, break_start="", break_end="")
+        ctx.flows.clear(uid)
+        text, kb = await master_break_screen(ctx, master_id)
+        await edit_q(q, "✅ Перерыв убран.\n\n" + text, kb)
+        return True
+
+    if action == "mst_break_common_save":
+        data_now = ctx.flows.data(uid)
+        master_id = int(data_now.get("master_id", 0))
+        start = data_now.get("start", "")
+        end = data_now.get("end", "")
+        await ctx.db.update_master(master_id, break_start=start, break_end=end)
+        ctx.flows.clear(uid)
+        text, kb = await master_break_screen(ctx, master_id)
+        await edit_q(q, f"✅ Перерыв {start}–{end} сохранён на все дни.\n\n" + text, kb)
         return True
 
     # ---------- добавление ----------
@@ -98,7 +170,7 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
             ctx,
             q,
             master_id,
-            suffix="✅ Мастер добавлен. Проверьте график и при необходимости измените часы.",
+            suffix="✅ Мастер добавлен. Часы работы и обед — общие, из «Настроек».",
         )
         return True
 

@@ -70,5 +70,14 @@
 
     <a class="btn btn--ghost" href="/">← Вернуться на сайт</a>
   </main>
+  <script>
+    (function () {
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) return;
+      var bg = getComputedStyle(document.documentElement)
+        .getPropertyValue('--bg').trim();
+      if (bg) meta.content = bg;
+    })();
+  </script>
 </body>
 </html>

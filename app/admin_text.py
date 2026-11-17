@@ -94,20 +94,20 @@ def setting_validate(ctx: Ctx, key: str, raw: str, settings: dict) -> tuple[Opti
     work_end = hhmm_to_min(settings.get("work_end", "21:00"))
     if key == "work_start":
         if not (minutes < min(last_slot, work_end)):
-            return None, "Начало должно быть раньше последнего слота и конца дня."
+            return None, "Открытие должно быть раньше последнего старта и закрытия."
     elif key == "last_slot":
         if not (work_start < minutes < work_end):
-            return None, "Последний слот должен быть между началом и концом дня."
+            return None, "Последний старт должен быть между открытием и закрытием."
     elif key == "work_end":
         if not (minutes > last_slot):
-            return None, "Конец дня должен быть позже последнего слота."
+            return None, "Закрытие должно быть позже последнего старта."
     return value, None
 
 
 SETTING_LABELS = {
-    "work_start": "Начало дня по умолчанию",
-    "last_slot": "Общий предел старта",
-    "work_end": "Конец дня по умолчанию",
+    "work_start": "Открытие салона",
+    "work_end": "Закрытие салона",
+    "last_slot": "Последний старт записи",
     "reminder_minutes": "Напоминание, минут",
     "privacy_updated": "Дата редакции политики",
 }

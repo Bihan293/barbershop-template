@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS masters (
     photo TEXT NOT NULL DEFAULT '',
     active INTEGER NOT NULL DEFAULT 1,
     sort INTEGER NOT NULL DEFAULT 0,
+    break_start TEXT NOT NULL DEFAULT '',
+    break_end TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
 );
 
@@ -193,6 +195,8 @@ CREATE TABLE IF NOT EXISTS masters (
     photo TEXT NOT NULL DEFAULT '',
     active INTEGER NOT NULL DEFAULT 1,
     sort INTEGER NOT NULL DEFAULT 0,
+    break_start TEXT NOT NULL DEFAULT '',
+    break_end TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
 );
 

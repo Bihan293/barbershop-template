@@ -141,17 +141,6 @@ async def handle_admin_cb(ctx: Ctx, q, data: str) -> None:
                         "\n\n⚠️ <b>Клиент записался через сайт — напишите ему, что заказ отменён.</b>"
                         f"\n📞 <b>{esc(display_phone(updated['phone']))}</b>"
                     )
-        elif parts[3] == "confirm" and not updated.get("client_notified"):
-            if updated.get("source") == "admin":
-                suffix += (
-                    "\n\n⚠️ Запись создана вручную — сообщите клиенту, "
-                    f"что запись подтверждена: <b>{esc(display_phone(updated['phone']))}</b>"
-                )
-            else:
-                suffix += (
-                    "\n\n⚠️ Клиент записался через сайт — сообщите ему, "
-                    f"что запись подтверждена: <b>{esc(display_phone(updated['phone']))}</b>"
-                )
         await edit_q(q, text + suffix, kb)
         return
 

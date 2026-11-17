@@ -708,8 +708,6 @@ CONTACTS = [
     ("city", "Город", "Алматы"),
     ("address", "Адрес", "пр. Достык, 132"),
     ("address_note", "Адрес: уточнение", "уг. ул. Кабанбай батыра"),
-    ("hours", "Часы работы", "Ежедневно, 10:00–21:00"),
-    ("hours_note", "Часы: примечание", "Последняя запись — в 20:00"),
     ("phone", "Телефон", "+7 700 000 00 00"),
     ("whatsapp", "WhatsApp (цифры)", "77000000000"),
     ("twogis_url", "Ссылка 2ГИС", "https://2gis.kz/..."),
@@ -726,7 +724,15 @@ async def contacts_screen(ctx: Ctx) -> tuple[str, Kb]:
         if key == "whatsapp":
             value = display_phone(whatsapp_digits(settings))
         lines.append(f"<b>{esc(label)}:</b> {esc(value) or '—'}")
-    lines += ["", "Нажмите поле, чтобы изменить. Изменения появятся на сайте после обновления страницы."]
+    lines += [
+        "",
+        f"🕘 Часы работы: <b>{esc(settings_hours_text(settings))}</b>",
+        f"{esc(settings_hours_note(settings))}",
+        "",
+        "Часы работы и обед меняются в «Настройках» — они общие для сайта, "
+        "записи и всех мастеров.",
+        "Нажмите поле, чтобы изменить. Изменения появятся на сайте после обновления страницы.",
+    ]
     rows: list[list[Btn]] = []
     pair: list[Btn] = []
     for key, label, _ in CONTACTS:
@@ -749,25 +755,25 @@ async def settings_screen(ctx: Ctx) -> tuple[str, Kb]:
         "⚙️ <b>Настройки записи</b>",
         "",
         f"Онлайн-запись: <b>{'включена' if enabled else 'выключена'}</b>",
+        f"Часы работы: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>",
+        f"Последний старт: <b>{settings.get('last_slot', '20:00')}</b>",
         f"Шаг слотов: <b>{settings.get('slot_step', '30')} мин</b>",
-        f"Часы по умолчанию: <b>{settings.get('work_start', '10:00')}–{settings.get('work_end', '21:00')}</b>",
-        f"Общий предел старта: <b>{settings.get('last_slot', '20:00')}</b>",
         f"Напоминание админу: <b>за {settings.get('reminder_minutes', '120')} мин</b>",
         f"Редакция политики: <b>{esc(settings.get('privacy_updated', '—'))}</b>",
         "",
-        "Часы по умолчанию нужны для новых мастеров. "
-        "У каждого мастера свой график в разделе «Мастера». "
-        "Общий предел старта действует для всех.",
+        "Эти часы — единые для сайта, записи и всех мастеров. "
+        "Перерыв у каждого мастера свой и задаётся в карточке мастера. "
+        "Сайт показывает эти же часы в контактах.",
     ]
     rows = [
         [Btn("🔴 Выключить запись" if enabled else "🟢 Включить запись", callback_data="adm:set_toggle")],
         [
-            Btn("⏱ Шаг слотов", callback_data="adm:set_step"),
-            Btn("🕘 Начало", callback_data="adm:set_edit:work_start"),
+            Btn("🕘 Открытие", callback_data="adm:set_edit:work_start"),
+            Btn("🕘 Закрытие", callback_data="adm:set_edit:work_end"),
         ],
         [
-            Btn("🕘 Предел старта", callback_data="adm:set_edit:last_slot"),
-            Btn("🕘 Конец", callback_data="adm:set_edit:work_end"),
+            Btn("🕘 Последний старт", callback_data="adm:set_edit:last_slot"),
+            Btn("⏱ Шаг слотов", callback_data="adm:set_step"),
         ],
         [Btn("🔔 Напоминание", callback_data="adm:set_edit:reminder_minutes"),
          Btn("📄 Дата политики", callback_data="adm:set_edit:privacy_updated")],
