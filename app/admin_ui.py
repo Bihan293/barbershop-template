@@ -8,7 +8,7 @@ from .deps import *
 async def admin_home_text(ctx: Ctx) -> str:
     settings = await ctx.db.get_settings()
     stats = await ctx.db.today_stats()
-    nearest = None if filter_name == "archive" else await ctx.db.nearest_order()
+    nearest = await ctx.db.nearest_order()
     new_row = await ctx.db.fetchone("SELECT COUNT(*) AS c FROM orders WHERE status='new'")
     new_count = int(new_row["c"]) if new_row else 0
     master_row = await ctx.db.fetchone("SELECT COUNT(*) AS c FROM masters WHERE active=1")
@@ -97,7 +97,7 @@ async def orders_screen(ctx: Ctx, filter_name: str = "upcoming", page: int = 0) 
     orders = await ctx.db.list_orders(filter_name, limit + 1, page * limit)
     has_more = len(orders) > limit
     orders = orders[:limit]
-    nearest = await ctx.db.nearest_order()
+    nearest = None if filter_name == "archive" else await ctx.db.nearest_order()
 
     lines = [f"📥 <b>Заказы</b> · {ORDERS_FILTERS[filter_name]} · стр. {page + 1}"]
     if nearest:
