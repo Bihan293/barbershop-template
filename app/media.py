@@ -22,10 +22,17 @@ def photo_path(ctx: Ctx, relative: str) -> Optional[Path]:
 
 
 async def download_photo(ctx: Ctx, message, subdir: str = "tmp") -> Optional[str]:
-    if not message.photo:
+    suffix = ".jpg"
+    if message.photo:
+        tg_file = await message.photo[-1].get_file()
+    elif message.document and str(message.document.mime_type or "").startswith("image/"):
+        tg_file = await message.document.get_file()
+        suffix = Path(message.document.file_name or "").suffix.lower()
+        if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            suffix = ".jpg"
+    else:
         return None
-    tg_file = await message.photo[-1].get_file()
-    name = f"{uuid.uuid4().hex}.jpg"
+    name = f"{uuid.uuid4().hex}{suffix}"
     relative = f"{subdir}/{name}"
     path = ctx.cfg.media_dir / relative
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -39,7 +46,10 @@ def move_photo(ctx: Ctx, temp_relative: str, subdir: str) -> str:
     source = ctx.cfg.media_dir / temp_relative
     if not source.exists():
         return ""
-    name = f"{uuid.uuid4().hex}.jpg"
+    suffix = source.suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        suffix = ".jpg"
+    name = f"{uuid.uuid4().hex}{suffix}"
     target = ctx.cfg.media_dir / subdir / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(source), str(target))
