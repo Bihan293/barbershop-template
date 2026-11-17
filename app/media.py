@@ -102,6 +102,7 @@ async def send_photo_file(
     relative: str,
     caption: str = "",
     user_id: Optional[int] = None,
+    reply_markup: Optional[Kb] = None,
 ) -> bool:
     path = photo_path(ctx, relative)
     if not path or ctx.bot is None:
@@ -115,6 +116,7 @@ async def send_photo_file(
                 photo=photo_file,
                 caption=caption,
                 parse_mode=ParseMode.HTML,
+                reply_markup=reply_markup,
             )
         if user_id is not None and sent is not None:
             message_id = getattr(sent, "message_id", None)
@@ -134,6 +136,7 @@ async def replace_admin_screen(
     *,
     photo_rel: str = "",
     caption: str = "",
+    photo_caption: str = "",
     user_id: Optional[int] = None,
 ) -> None:
     """Удаляет старый экран и присылает новый: фото сверху, кнопки снизу."""
@@ -144,7 +147,22 @@ async def replace_admin_screen(
         with contextlib.suppress(TelegramError):
             await deleter()
     if photo_rel:
-        await send_photo_file(ctx, chat_id, photo_rel, caption, user_id=user_id or q.from_user.id)
+        # Если полный текст помещается в подпись — прикрепляем кнопки
+        # прямо к фото, чтобы они не терялись отдельным сообщением.
+        if photo_caption and len(photo_caption) <= 900 and kb is not None:
+            sent = await send_photo_file(
+                ctx,
+                chat_id,
+                photo_rel,
+                photo_caption,
+                user_id=user_id or q.from_user.id,
+                reply_markup=kb,
+            )
+            if sent:
+                return
+        await send_photo_file(
+            ctx, chat_id, photo_rel, caption, user_id=user_id or q.from_user.id
+        )
     if ctx.bot is None:
         return
     await ctx.bot.send_message(
