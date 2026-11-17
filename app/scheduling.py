@@ -113,20 +113,26 @@ def master_slots(
             continue
         busy.append((order_start, max(5, _as_int(order.get("duration"), step))))
 
-    result: list[str] = []
+    candidates: set[int] = set()
     cursor = start
     while cursor <= max_start:
+        candidates.add(cursor)
+        cursor += step
+    # Если перерыв заканчивается не по сетке шага, разрешаем старт сразу
+    # после перерыва, чтобы мастер не простаивал лишний шаг.
+    for _, break_end in break_windows:
+        if start <= break_end <= max_start:
+            candidates.add(break_end)
+
+    result: list[str] = []
+    for cursor in sorted(candidates):
         if cursor <= lead:
-            cursor += step
             continue
         if any(overlaps(cursor, duration, break_start, break_end - break_start) for break_start, break_end in break_windows):
-            cursor += step
             continue
         if any(overlaps(cursor, duration, order_start, order_duration) for order_start, order_duration in busy):
-            cursor += step
             continue
         result.append(min_to_hhmm(cursor))
-        cursor += step
     return result
 
 

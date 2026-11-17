@@ -250,18 +250,14 @@ async def handle_master_cb(ctx: Ctx, q, data: str) -> bool:
     if action == "mst_photo_del" and len(parts) >= 3:
         master_id = int(parts[2])
         master = await ctx.db.get_master(master_id)
-        if not master or not master.get("photo"):
-            await safe_answer(q, "У мастера уже нет фото", show_alert=True)
+        if not master:
+            await safe_answer(q, "Мастер не найден", show_alert=True)
             return True
-        await edit_q(
-            q,
-            f"🗑 <b>Удалить фото мастера?</b>\n\n{esc(master['name'])}\n\n"
-            "Имя, описание и график останутся.",
-            Kb([
-                [Btn("✅ Да, удалить", callback_data=f"adm:mst_photo_delok:{master_id}")],
-                [Btn("← Нет, назад", callback_data=f"adm:mst:{master_id}")],
-            ]),
-        )
+        if master.get("photo"):
+            remove_photo(ctx, master["photo"])
+            await ctx.db.update_master(master_id, photo="")
+        ctx.flows.clear(uid)
+        await show_master_detail(ctx, q, master_id, suffix="✅ Фото мастера удалено.")
         return True
 
     if action == "mst_photo_delok" and len(parts) >= 3:

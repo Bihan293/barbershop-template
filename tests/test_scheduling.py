@@ -117,6 +117,15 @@ class SchedulingTests(unittest.TestCase):
         self.assertIn("12:00", result)
         self.assertIn("15:00", result)
 
+    def test_break_end_off_grid_is_available(self):
+        result = slots(
+            masters=[master(break_start="13:00", break_end="13:30")],
+            settings={"slot_step": "60", "lunch_start": "", "lunch_end": ""},
+        )
+        self.assertNotIn("13:00", result)
+        self.assertIn("13:30", result)
+        self.assertIn("14:00", result)
+
     def test_master_break_is_individual(self):
         result_any = slots(
             masters=[master(1, break_start="13:00", break_end="14:00"), master(2)],
