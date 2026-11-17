@@ -133,6 +133,7 @@ async def show_master_detail(ctx: Ctx, q, master_id: int, suffix: str = "") -> N
         master_detail_kb(master, today_off=today_off),
         photo_rel=master.get("photo", ""),
         caption=f"{esc(master['name'])} · мастер",
+        photo_caption=text,
         user_id=q.from_user.id,
     )
 

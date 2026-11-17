@@ -519,6 +519,7 @@ async def show_service_detail(ctx: Ctx, q, service_id: int) -> None:
         service_kb(service),
         photo_rel=service.get("photo", ""),
         caption=f"{esc(service['name'])} · {money(service['price'])}",
+        photo_caption=service_text(service),
         user_id=q.from_user.id,
     )
 
@@ -583,6 +584,7 @@ async def show_gallery_detail(ctx: Ctx, q, item_id: int) -> None:
         gallery_kb(item),
         photo_rel=item.get("image", ""),
         caption=esc(item["caption"]) or "Без подписи",
+        photo_caption=gallery_text(item),
         user_id=q.from_user.id,
     )
 
