@@ -380,6 +380,8 @@ async def api_my_bookings(request: web.Request) -> web.Response:
         raw_tokens = []
     tokens = [str(token).strip() for token in raw_tokens if str(token).strip()][:20]
     orders = await ctx.db.orders_by_tokens(tokens)
+    # В личном кабинете показываем только активные записи.
+    orders = [order for order in orders if order.get("status") in {"new", "confirmed"}]
     payload = [await portal_order_payload(ctx, order) for order in orders]
     return web.json_response({"ok": True, "orders": payload}, headers={"Cache-Control": "no-store"})
 
