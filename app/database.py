@@ -683,8 +683,8 @@ class Database:
         description: str = "",
         photo: str = "",
         active: int = 1,
-        break_start: str = "13:00",
-        break_end: str = "14:00",
+        break_start: str = "",
+        break_end: str = "",
     ) -> int:
         settings = await self.get_settings()
         work_start = settings.get("work_start", "10:00")
