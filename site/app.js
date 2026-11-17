@@ -1136,7 +1136,7 @@
           myBookingsList.innerHTML = '';
           myBookingsMessage.hidden = false;
           myBookingsMessage.textContent = readMyTokens().length
-            ? 'Записей пока нет. Самое время записаться.'
+            ? 'Активных записей нет. Самое время записаться.'
             : 'На этом устройстве записей нет. Запишитесь через сайт — и они появятся здесь. Если вы записывались с другого устройства, позвоните в салон.';
           return;
         }
@@ -1232,7 +1232,9 @@
           body: JSON.stringify({ tokens: tokens })
         }, 8000).then(function (result) {
           if (result.data && result.data.ok && Array.isArray(result.data.orders)) {
-            myOrders = result.data.orders;
+            myOrders = result.data.orders.filter(function (order) {
+              return order.status === 'new' || order.status === 'confirmed';
+            });
             renderMyBookings();
           } else {
             myBookingsMessage.textContent = 'Не удалось загрузить записи.';
